@@ -17,7 +17,7 @@ services:
 
   # Backend API Service
   api:
-    image: node:18-alpine
+    image: node:20-alpine
     working_dir: /app
     volumes:
       - ./:/app
@@ -29,6 +29,7 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgres://admin:password123@db:5432/calendar_app
+      API_KEY: ${API_KEY}
     command: sh -c "npm install && npm start"
 
 volumes:
