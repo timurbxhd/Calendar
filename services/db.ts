@@ -1,22 +1,6 @@
-import Dexie, { Table } from 'dexie';
-import { User, CalendarEvent } from '../types';
-
 /**
- * В полноценном Docker-проекте этот файл был бы заменен на конфигурацию подключения
- * к PostgreSQL или MongoDB. В браузере мы используем IndexedDB как лучшую альтернативу
- * настоящей базе данных.
+ * Этот файл больше не используется.
+ * Мы перешли на использование PostgreSQL через Docker.
+ * Логика работы с базой данных теперь находится в server.js (backend) и storageService.ts (клиентские запросы к API).
  */
-export class CalendarAppDatabase extends Dexie {
-  users!: Table<User>;
-  events!: Table<CalendarEvent>;
-
-  constructor() {
-    super('CalendarAppDB');
-    this.version(1).stores({
-      users: 'id, &username', // id - primary key, username - unique index
-      events: 'id, userId, date' // id - primary key, indexes on userId and date
-    });
-  }
-}
-
-export const db = new CalendarAppDatabase();
+export const db = null;
