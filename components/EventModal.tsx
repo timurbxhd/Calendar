@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarEvent, EVENT_COLORS } from '../types';
-import { parseNaturalLanguageEvent } from '../services/geminiService';
+import { CalendarEvent, EVENT_COLORS } from '../types.ts';
+import { parseNaturalLanguageEvent } from '../services/geminiService.ts';
 
 interface EventModalProps {
   userId: string;
@@ -62,7 +62,7 @@ const EventModal: React.FC<EventModalProps> = ({
       }
     } catch (e) {
       console.error(e);
-      alert('Не удалось распознать текст. Проверьте API Key.');
+      alert('Не удалось распознать текст. Проверьте сервер.');
     } finally {
       setIsThinking(false);
     }

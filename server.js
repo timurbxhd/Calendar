@@ -1,7 +1,14 @@
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
-const bodyParser = require('body-parser');
+import express from 'express';
+import pg from 'pg';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import { GoogleGenAI, Type } from "@google/genai";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const { Pool } = pg;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -9,11 +16,15 @@ const port = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static(__dirname)); // Serve static files (frontend)
 
 // Database Connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
+
+// AI Client
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Test DB connection
 pool.query('SELECT NOW()', (err, res) => {
@@ -26,18 +37,62 @@ pool.query('SELECT NOW()', (err, res) => {
 
 // --- Routes ---
 
+// AI Parse Route
+app.post('/api/ai/parse', async (req, res) => {
+  const { prompt, referenceDate } = req.body;
+  
+  if (!prompt) return res.status(400).json({ error: 'Prompt required' });
+
+  try {
+    const todayStr = new Date(referenceDate).toISOString().split('T')[0];
+    const aiPrompt = `
+      User Input: "${prompt}"
+      Reference Date (Today): ${todayStr}
+
+      Extract the event details into JSON. 
+      - If the year is missing, assume current year.
+      - If date is missing, assume today.
+      - date must be YYYY-MM-DD.
+      - time must be HH:mm (24 hour). If no time specified, use "09:00".
+      - description should be a short summary or empty string.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: aiPrompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            date: { type: Type.STRING },
+            time: { type: Type.STRING },
+            description: { type: Type.STRING }
+          },
+          required: ["title", "date", "time"]
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text));
+  } catch (error) {
+    console.error("AI Error:", error);
+    res.status(500).json({ error: "Failed to parse event" });
+  }
+});
+
 // Register
 app.post('/api/auth/register', async (req, res) => {
   const { username, password } = req.body;
   try {
-    // In a real app, hash the password here using bcrypt
     const result = await pool.query(
       'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username',
       [username, password]
     );
     res.json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') { // Unique violation
+    if (err.code === '23505') {
       res.status(409).json({ error: 'Username already exists' });
     } else {
       console.error(err);
@@ -60,8 +115,6 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const user = result.rows[0];
-    
-    // In real app, compare hash with bcrypt.compare
     if (user.password_hash !== password) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -84,7 +137,6 @@ app.get('/api/events', async (req, res) => {
       [userId]
     );
     
-    // Format date objects to YYYY-MM-DD strings if postgres returns Date objects
     const formattedEvents = result.rows.map(e => ({
       ...e,
       date: new Date(e.date).toISOString().split('T')[0]
@@ -97,22 +149,19 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
-// Save Event (Create or Update)
+// Save Event
 app.post('/api/events', async (req, res) => {
   const { id, userId, title, description, date, time, color } = req.body;
   
   try {
-    // Check if exists
     const check = await pool.query('SELECT id FROM events WHERE id = $1', [id]);
     
     if (check.rows.length > 0) {
-      // Update
       await pool.query(
         'UPDATE events SET title=$1, description=$2, event_date=$3, event_time=$4, color=$5 WHERE id=$6',
         [title, description, date, time, color, id]
       );
     } else {
-      // Insert
       await pool.query(
         'INSERT INTO events (id, user_id, title, description, event_date, event_time, color) VALUES ($1, $2, $3, $4, $5, $6, $7)',
         [id, userId, title, description, date, time, color]
@@ -135,6 +184,11 @@ app.delete('/api/events/:id', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Catch-all for SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(port, () => {

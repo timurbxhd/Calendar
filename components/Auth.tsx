@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { User } from '../types';
-import { loginUser, registerUser, persistSession } from '../services/storageService';
+import { User } from '../types.ts';
+import { loginUser, registerUser, persistSession } from '../services/storageService.ts';
 
 interface AuthProps {
   onLogin: (user: User) => void;

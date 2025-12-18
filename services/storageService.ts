@@ -1,4 +1,4 @@
-import { User, CalendarEvent } from '../types';
+import { User, CalendarEvent } from '../types.ts';
 
 const SESSION_KEY = 'calendar_app_session_uid';
 const API_URL = 'http://localhost:3000/api';

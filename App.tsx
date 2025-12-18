@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User } from './types';
-import { getSession, clearSession } from './services/storageService';
-import Auth from './components/Auth';
-import Calendar from './components/Calendar';
+import { User } from './types.ts';
+import { getSession, clearSession } from './services/storageService.ts';
+import Auth from './components/Auth.tsx';
+import Calendar from './components/Calendar.tsx';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);

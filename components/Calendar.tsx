@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, CalendarEvent } from '../types';
-import { getEvents, saveEvent, deleteEvent } from '../services/storageService';
-import EventModal from './EventModal';
+import { User, CalendarEvent } from '../types.ts';
+import { getEvents, saveEvent, deleteEvent } from '../services/storageService.ts';
+import EventModal from './EventModal.tsx';
 
 interface CalendarProps {
   user: User;
