@@ -28,49 +28,6 @@ const pool = new Pool({
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// --- Database Initialization ---
-const initDb = async () => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    
-    // Create Users Table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        username VARCHAR(50) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    // Create Events Table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS events (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        title VARCHAR(100) NOT NULL,
-        description TEXT,
-        event_date DATE NOT NULL,
-        event_time VARCHAR(5) DEFAULT '09:00',
-        color VARCHAR(20) DEFAULT 'bg-blue-500',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    await client.query('COMMIT');
-    console.log("Database tables initialized successfully.");
-  } catch (e) {
-    await client.query('ROLLBACK');
-    console.error("Database initialization failed:", e);
-  } finally {
-    client.release();
-  }
-};
-
-// Initialize DB on server start
-initDb();
-
 // --- Routes ---
 
 app.post('/api/ai/parse', async (req, res) => {
