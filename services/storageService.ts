@@ -1,7 +1,8 @@
 import { User, CalendarEvent } from '../types.ts';
 
 const SESSION_KEY = 'calendar_app_session_uid';
-const API_URL = 'http://localhost:3000/api';
+// Use relative path for API calls since frontend is served by backend
+const API_URL = '/api';
 
 // --- API Implementation ---
 
@@ -86,8 +87,6 @@ export const getSession = async (): Promise<User | null> => {
   
   if (!userId || !username) return null;
 
-  // In a real production app, you would validate this token/session with the backend here.
-  // For this simple demo, we trust the local storage if it exists.
   return { id: userId, username, passwordHash: '' };
 };
 

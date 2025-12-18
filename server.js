@@ -5,6 +5,7 @@ import bodyParser from 'body-parser';
 import { GoogleGenAI, Type } from "@google/genai";
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -16,7 +17,27 @@ const port = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(__dirname)); // Serve static files (frontend)
+
+// Logging for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - Request: ${req.method} ${req.url}`);
+  next();
+});
+
+// Explicitly serve index.html at root
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    console.error(`ERROR: index.html not found at ${indexPath}`);
+    res.status(404).send('FATAL ERROR: index.html not found. Check container volumes.');
+  }
+});
+
+// Serve static files (like index.tsx, App.tsx, css)
+// We serve the root directory so browser can load .tsx files via Babel
+app.use(express.static(__dirname));
 
 // Database Connection
 const pool = new Pool({
@@ -186,11 +207,17 @@ app.delete('/api/events/:id', async (req, res) => {
   }
 });
 
-// Catch-all for SPA
+// Catch-all for SPA (must be last)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const indexPath = path.join(__dirname, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('index.html not found');
+  }
 });
 
 app.listen(port, () => {
   console.log(`API Server running on port ${port}`);
+  console.log(`Working directory: ${__dirname}`);
 });
