@@ -100,11 +100,21 @@ app.get('/api/events', async (req, res) => {
 app.post('/api/events', async (req, res) => {
   const { id, userId, title, description, date, time, color } = req.body;
   try {
+    // Check if event exists
     const check = await pool.query('SELECT id FROM events WHERE id = $1', [id]);
+    
     if (check.rows.length > 0) {
-      await pool.query('UPDATE events SET title=$1, description=$2, event_date=$3, event_time=$4, color=$5 WHERE id=$6', [title, description, date, time, color, id]);
+      // Update
+      await pool.query(
+        'UPDATE events SET title=$1, description=$2, event_date=$3, event_time=$4, color=$5 WHERE id=$6', 
+        [title, description, date, time, color, id]
+      );
     } else {
-      await pool.query('INSERT INTO events (id, user_id, title, description, event_date, event_time, color) VALUES ($1, $2, $3, $4, $5, $6, $7)', [id, userId, title, description, date, time, color]);
+      // Insert
+      await pool.query(
+        'INSERT INTO events (id, user_id, title, description, event_date, event_time, color) VALUES ($1, $2, $3, $4, $5, $6, $7)', 
+        [id, userId, title, description, date, time, color]
+      );
     }
     res.json({ success: true });
   } catch (err) {
