@@ -2,36 +2,17 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 
 // --- TYPES ---
-
-interface User {
-  id: string;
-  username: string;
-}
-
+interface User { id: string; username: string; }
 interface CalendarEvent {
-  id: string;
-  userId: string;
-  title: string;
-  description: string;
-  date: string; // ISO String YYYY-MM-DD
-  time: string; // HH:mm
-  color: string;
+  id: string; userId: string; title: string; description: string;
+  date: string; time: string; color: string;
 }
 
-const EVENT_COLORS = [
-  'bg-blue-500',
-  'bg-green-500',
-  'bg-red-500',
-  'bg-yellow-500',
-  'bg-purple-500',
-  'bg-pink-500',
-];
-
-// --- SERVICES ---
-
+const EVENT_COLORS = ['bg-blue-500', 'bg-green-500', 'bg-red-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500'];
 const API_URL = '/api';
 const SESSION_KEY = 'calendar_app_session_uid';
 
+// --- SERVICES ---
 const api = {
   register: async (username, password) => {
     try {
@@ -44,7 +25,6 @@ const api = {
       return await res.json();
     } catch (e) { console.error(e); return null; }
   },
-
   login: async (username, password) => {
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
@@ -56,7 +36,6 @@ const api = {
       return await res.json();
     } catch (e) { console.error(e); return null; }
   },
-
   getEvents: async (userId) => {
     try {
       const res = await fetch(`${API_URL}/events?userId=${userId}`);
@@ -64,7 +43,6 @@ const api = {
       return await res.json();
     } catch (e) { console.error(e); return []; }
   },
-
   saveEvent: async (event) => {
     await fetch(`${API_URL}/events`, {
       method: 'POST',
@@ -72,11 +50,9 @@ const api = {
       body: JSON.stringify(event)
     });
   },
-
   deleteEvent: async (id) => {
     await fetch(`${API_URL}/events/${id}`, { method: 'DELETE' });
   },
-
   parseAI: async (prompt, referenceDate) => {
     try {
       const res = await fetch(`${API_URL}/ai/parse`, {
@@ -108,7 +84,6 @@ const session = {
 
 // --- COMPONENTS ---
 
-// 1. Auth Component
 const Auth = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
@@ -160,7 +135,6 @@ const Auth = ({ onLogin }) => {
   );
 };
 
-// 2. Event Modal Component
 const EventModal = ({ userId, selectedDate, isOpen, onClose, onSave, existingEvent, onDelete }) => {
   const [formData, setFormData] = useState({ title: '', description: '', date: '', time: '09:00', color: EVENT_COLORS[0] });
   const [aiPrompt, setAiPrompt] = useState('');
@@ -229,7 +203,6 @@ const EventModal = ({ userId, selectedDate, isOpen, onClose, onSave, existingEve
   );
 };
 
-// 3. Calendar Component
 const Calendar = ({ user, onLogout }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
@@ -306,7 +279,6 @@ const Calendar = ({ user, onLogout }) => {
   );
 };
 
-// 4. Main App
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);

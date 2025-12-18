@@ -17,8 +17,8 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Explicitly handle TSX mime type (though Babel fetches via XHR usually)
-express.static.mime.define({'text/plain': ['tsx']});
+// Explicitly handle TSX mime type for browser ES modules
+express.static.mime.define({'text/javascript': ['tsx']});
 
 app.use(express.static(__dirname));
 
@@ -28,7 +28,51 @@ const pool = new Pool({
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// Routes
+// --- Database Initialization ---
+const initDb = async () => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Create Users Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Create Events Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(100) NOT NULL,
+        description TEXT,
+        event_date DATE NOT NULL,
+        event_time VARCHAR(5) DEFAULT '09:00',
+        color VARCHAR(20) DEFAULT 'bg-blue-500',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query('COMMIT');
+    console.log("Database tables initialized successfully.");
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error("Database initialization failed:", e);
+  } finally {
+    client.release();
+  }
+};
+
+// Initialize DB on server start
+initDb();
+
+// --- Routes ---
+
 app.post('/api/ai/parse', async (req, res) => {
   const { prompt, referenceDate } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Prompt required' });
@@ -68,6 +112,7 @@ app.post('/api/auth/register', async (req, res) => {
     const result = await pool.query('INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username', [username, password]);
     res.json(result.rows[0]);
   } catch (err) {
+    console.error("Register error:", err);
     res.status(err.code === '23505' ? 409 : 500).json({ error: 'Error' });
   }
 });
@@ -79,6 +124,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
     res.json(result.rows[0]);
   } catch (err) {
+    console.error("Login error:", err);
     res.status(500).json({ error: 'Error' });
   }
 });
@@ -89,6 +135,7 @@ app.get('/api/events', async (req, res) => {
     const result = await pool.query('SELECT id, user_id, title, description, event_date as date, event_time as time, color FROM events WHERE user_id = $1', [userId]);
     res.json(result.rows.map(e => ({ ...e, date: new Date(e.date).toISOString().split('T')[0] })));
   } catch (err) {
+    console.error("Get events error:", err);
     res.status(500).json({ error: 'Error' });
   }
 });
@@ -104,6 +151,7 @@ app.post('/api/events', async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error("Save event error:", err);
     res.status(500).json({ error: 'Error' });
   }
 });
@@ -113,6 +161,7 @@ app.delete('/api/events/:id', async (req, res) => {
     await pool.query('DELETE FROM events WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
+    console.error("Delete event error:", err);
     res.status(500).json({ error: 'Error' });
   }
 });
